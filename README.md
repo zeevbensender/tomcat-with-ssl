@@ -1,7 +1,6 @@
 # Spring Boot Tomcat
 This project contains only a single rest controller and SSL configutation.
 The purpose of the project is to test the keystore.
-It was tested only on window OS, but it's supposed to run on other systems as well.
 
 The localrun.bat script can be used to start the server as well as mvnw script.
 
