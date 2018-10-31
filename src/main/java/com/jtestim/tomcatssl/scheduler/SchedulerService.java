@@ -39,6 +39,17 @@ public class SchedulerService {
                 .build();
         sched.scheduleJob(job, trigger);
 
+
+        JobDetail cronJob = newJob(CronJob.class)
+                .withIdentity("cronJob", "group1")
+                .build();
+        Trigger cron = newTrigger().withIdentity("cronJob", "group1")
+                .withSchedule(cronSchedule("0/15 * * * * ?")).
+                        forJob("cronJob", "group1").build();
+        sched.scheduleJob(cronJob, cron);
+
+
+
     }
 
 }

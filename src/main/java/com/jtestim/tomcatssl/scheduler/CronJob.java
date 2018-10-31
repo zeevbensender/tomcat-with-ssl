@@ -9,10 +9,10 @@ import org.slf4j.LoggerFactory;
 /**
  * Created by bensende on 31/10/2018.
  */
-public class HelloJob implements Job {
-    private static final Logger LOG = LoggerFactory.getLogger(HelloJob.class);
+public class CronJob implements Job {
+    private static final Logger LOG = LoggerFactory.getLogger(CronJob.class);
     @Override
     public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
-        LOG.error(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> I'm the most simple job");
+        LOG.error(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> I'm the job running by the cron scheduler");
     }
 }
