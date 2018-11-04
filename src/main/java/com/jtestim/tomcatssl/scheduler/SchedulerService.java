@@ -32,14 +32,13 @@ import static org.quartz.SimpleScheduleBuilder.simpleSchedule;
  */
 @Service
 @Import({SchedulerConfig.class})
-public class SchedulerService implements ApplicationListener<SchedulerStatusEvent> {
+public class SchedulerService {
     private static final Logger LOG = LoggerFactory.getLogger(SchedulerService.class);
     @Autowired
     private SchedulerFactoryBean schedulerFactory;
 
 
-    @Override
-    public void onApplicationEvent(SchedulerStatusEvent evnt) {
+    public void scheduleJob(SchedulerStatusEvent evnt) {
         Trigger trgr;
         String jgroup = evnt.getGroup();
         String jname = evnt.getJobName();
