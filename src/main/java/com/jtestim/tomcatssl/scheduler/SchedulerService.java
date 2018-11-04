@@ -1,10 +1,13 @@
 package com.jtestim.tomcatssl.scheduler;
 
 import com.jtestim.tomcatssl.util.SchedulingException;
+import org.apache.commons.lang3.StringUtils;
+import org.quartz.CronTrigger;
 import org.quartz.JobDetail;
 import org.quartz.JobKey;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
+import org.quartz.SimpleTrigger;
 import org.quartz.Trigger;
 import org.quartz.impl.matchers.GroupMatcher;
 import org.slf4j.Logger;
@@ -41,39 +44,54 @@ public class SchedulerService {
     }
 
 
-    public void scheduleCronJob(SchedulerStatusEvent evnt) throws SchedulingException {
-        String jgroup = evnt.getGroup();
-        String jname = evnt.getJobName();
-        JobDetail job = newJob(evnt.getJobClass())
-                .withIdentity(jname, jgroup)
-                .build();
+    public void scheduleJob(SchedulerStatusEvent event) throws SchedulingException {
+        String jgroup = event.getGroup();
+        String jname = event.getJobName();
+        JobDetail job = getScheduledJob(jgroup, jname);
 
-        Trigger trigger = newTrigger().withIdentity(jname + ".trigger", jgroup)
-                .withSchedule(cronSchedule(evnt.getCronExpression())).
-                        forJob(jname, jgroup).build();
-        scheduleJob(job, trigger);
+
+        Trigger trigger;
+        if (StringUtils.isNotEmpty(event.getCronExpression()) && event.getIntervalSeconds() < 0) {
+            trigger = createCronTrigger(event);
+        } else if (StringUtils.isEmpty(event.getCronExpression()) && event.getIntervalSeconds() >= 0) {
+            trigger = createPeriodicTrigger(event);
+        } else {
+            throw new IllegalStateException("Illegal values for either cron expression or interval");
+        }
+
+        if(job == null){
+            job = newJob(event.getJobClass())
+                    .withIdentity(jname, jgroup)
+                    .build();
+            scheduleJob(job, trigger);
+        }else {
+            rescheduleJob(trigger);
+        }
     }
 
-    public void schedulePeriodicJob(SchedulerStatusEvent evnt) throws SchedulingException {
-        String jgroup = evnt.getGroup();
-        String jname = evnt.getJobName();
-        int intrv = evnt.getIntervalSeconds();
-        JobDetail job = newJob(evnt.getJobClass())
-                .withIdentity(jname, jgroup)
-                .build();
+    private CronTrigger createCronTrigger(SchedulerStatusEvent event) {
+        return newTrigger().withIdentity(event.getJobName() + ".trigger", event.getGroup())
+                .withSchedule(cronSchedule(event.getCronExpression())).
+                        forJob(event.getJobName(), event.getGroup()).build();
+    }
 
-        Trigger trigger = newTrigger()
-                .withIdentity(jname + ".trigger", jgroup)
+
+    private SimpleTrigger createPeriodicTrigger(SchedulerStatusEvent event) {
+        return newTrigger()
+                .withIdentity(event.getJobName() + ".trigger", event.getGroup())
                 .startNow()
                 .withSchedule(simpleSchedule()
-                        .withIntervalInSeconds(intrv)
-                        .repeatForever()).forJob(jname, jgroup)
+                        .withIntervalInSeconds(event.getIntervalSeconds())
+                        .repeatForever()).forJob(event.getJobName(), event.getGroup())
                 .build();
-        scheduleJob(job, trigger);
     }
 
-    public JobDetail getScheduledJob(String group, String name) throws SchedulerException {
-        return sched.getJobDetail(new JobKey(group, name));
+    public JobDetail getScheduledJob(String group, String name) throws SchedulingException {
+        try {
+            return sched.getJobDetail(new JobKey(name, group));
+        } catch (SchedulerException e) {
+            throw new SchedulingException("Failed to fetch scheduled job", e);
+        }
     }
 
     public List<Trigger> getAllScheduledTriggers() throws SchedulerException{
@@ -117,6 +135,15 @@ public class SchedulerService {
         } catch (SchedulerException e) {
             LOG.error(e.getMessage(), e);
             throw new SchedulingException("Failed to schedule job", e);
+        }
+    }
+
+    private void rescheduleJob(Trigger trigger) throws SchedulingException {
+        try {
+            sched.rescheduleJob(trigger.getKey(), trigger);
+        } catch (SchedulerException e) {
+            LOG.error(e.getMessage(), e);
+            throw new SchedulingException("Failed to reschedule job", e);
         }
     }
 

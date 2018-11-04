@@ -23,16 +23,10 @@ public class SchedulingEventListener implements ApplicationListener<SchedulerSta
 
             if (!event.isEnabled()) {
                 schedulerService.unscheduleJob(event.getGroup(), event.getJobName());
+            }else {
+                schedulerService.scheduleJob(event);
             }
 
-            if (StringUtils.isNotEmpty(event.getCronExpression()) && event.getIntervalSeconds() < 0) {
-                schedulerService.scheduleCronJob(event);
-
-            } else if (StringUtils.isEmpty(event.getCronExpression()) && event.getIntervalSeconds() >= 0) {
-                schedulerService.schedulePeriodicJob(event);
-            } else {
-                throw new IllegalStateException("Illegal values for either cron expression or interval");
-            }
         }catch (SchedulingException e){
             LOG.error(e.getMessage(), e);
         }
